@@ -80,3 +80,110 @@ function manage_user_tags_user_column($columns)
     return $columns;
 }
 add_filter('manage_edit-user_tags_columns', 'manage_user_tags_user_column');
+
+/**
+ * @param string $display WP just passes an empty string here.
+ * @param string $column The name of the custom column.
+ * @param int $term_id The ID of the term being displayed in the table.
+ */
+function manage_user_tags_column($display, $column, $term_id)
+{
+
+    if ('users' === $column) {
+        $term = get_term($term_id, 'user_tags');
+        echo $term->count;
+    }
+}
+add_filter('manage_user_tags_custom_column', 'manage_user_tags_column', 10, 3);
+
+/**
+ * @param object $user The user object currently being edited.
+ */
+function edit_user_user_tags_section($user)
+{
+    global $pagenow;
+
+    $tax = get_taxonomy('user_tags');
+
+    /* Make sure the user can assign terms of the user tags taxonomy before proceeding. */
+    if (!current_user_can($tax->cap->assign_terms))
+        return;
+
+    /* Get the terms of the 'user tags' taxonomy. */
+    $terms = get_terms('user_tags', array('hide_empty' => false)); ?>
+
+    <h3><?php _e('User tags'); ?></h3>
+
+    <table class="form-table">
+
+        <tr>
+            <th><label for="user_tags"><?php _e('Allocated User tags'); ?></label></th>
+
+            <td><?php
+
+            /* If there are any user tags terms, loop through them and display checkboxes. */
+            if (!empty($terms)) {
+
+                echo custom_form_field('user_tags', $terms, $user->ID, 'dropdown');
+            }
+
+            /* If there are no user tags terms, display a message. */ else {
+                _e('There are no user tags available.');
+            }
+
+            ?></td>
+        </tr>
+
+    </table>
+<?php }
+
+add_action('show_user_profile', 'edit_user_user_tags_section');
+add_action('edit_user_profile', 'edit_user_user_tags_section');
+add_action('user_new_form', 'edit_user_user_tags_section');
+
+/**
+ * return field as dropdown or checkbox, by default checkbox if no field type given
+ * @param: name = taxonomy, options = terms avaliable, userId = user id to get linked terms
+ */
+
+function custom_form_field($name, $options, $userId, $type = 'checkbox')
+{
+    global $pagenow;
+    switch ($type) {
+        case 'checkbox':
+            foreach ($options as $term):
+                ?>
+                <label for="user_tags-<?php echo esc_attr($term->slug); ?>">
+                    <input type="checkbox" name="user_tags[]" id="user_tags-<?php echo esc_attr($term->slug); ?>"
+                        value="<?php echo $term->slug; ?>" <?php if ($pagenow !== 'user-new.php')
+                               checked(true, is_object_in_term($userId, 'user_tags', $term->slug)); ?>>
+                    <?php echo $term->name; ?>
+                </label><br />
+                <?php
+            endforeach;
+            break;
+        case 'dropdown':
+            $selectTerms = [];
+            foreach ($options as $term) {
+                $selectTerms[$term->term_id] = $term->name;
+            }
+
+            // get all terms linked with the user
+            $usrTerms = get_the_terms($userId, 'user_tags');
+            $usrTermsArr = [];
+            if (!empty($usrTerms)) {
+                foreach ($usrTerms as $term) {
+                    $usrTermsArr[] = (int) $term->term_id;
+                }
+            }
+            // Dropdown
+            echo "<select name='{$name}' id='dpts'>";
+            echo "<option value=''>-Select-</option>";
+            foreach ($selectTerms as $options_value => $options_label) {
+                $selected = (in_array($options_value, array_values($usrTermsArr))) ? " selected='selected'" : "";
+                echo "<option value='{$options_value}' {$selected}>{$options_label}</option>";
+            }
+            echo "</select>";
+            break;
+    }
+}

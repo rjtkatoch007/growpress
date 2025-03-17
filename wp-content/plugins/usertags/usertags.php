@@ -187,3 +187,58 @@ function custom_form_field($name, $options, $userId, $type = 'checkbox')
             break;
     }
 }
+/**
+ * @param int $user_id The ID of the user to save the terms for.
+ */
+function save_user_user_tags_terms($user_id)
+{
+
+    $tax = get_taxonomy('user_tags');
+
+    /* Make sure the current user can edit the user and assign terms before proceeding. */
+    if (!current_user_can('edit_user', $user_id) && current_user_can($tax->cap->assign_terms))
+        return false;
+
+    $term = $_POST['user_tags'];
+    $terms = is_array($term) ? $term : (int) $term; // fix for checkbox and select input field
+
+    /* Sets the terms (we're just using a single term) for the user. */
+    wp_set_object_terms($user_id, $terms, 'user_tags', false);
+
+    clean_object_term_cache($user_id, 'user_tags');
+}
+
+add_action('personal_options_update', 'save_user_user_tags_terms');
+add_action('edit_user_profile_update', 'save_user_user_tags_terms');
+add_action('user_register', 'save_user_user_tags_terms');
+
+/**
+ * @param string $username The username of the user before registration is complete.
+ */
+function disable_user_tags_username($username)
+{
+
+    if ('user_tags' === $username)
+        $username = '';
+
+    return $username;
+}
+add_filter('sanitize_user', 'disable_user_tags_username');
+
+/**
+ * Update parent file name to fix the selected menu issue
+ */
+function change_parent_file($parent_file)
+{
+    global $submenu_file;
+
+    if (
+        isset($_GET['taxonomy']) &&
+        $_GET['taxonomy'] == 'user_tags' &&
+        $submenu_file == 'edit-tags.php?taxonomy=user_tags'
+    )
+        $parent_file = 'users.php';
+
+    return $parent_file;
+}
+add_filter('parent_file', 'change_parent_file');

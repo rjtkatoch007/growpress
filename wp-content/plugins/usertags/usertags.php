@@ -48,3 +48,35 @@ function custom_taxonomy()
 
 }
 add_action('init', 'custom_taxonomy', 0);
+
+/**
+ * Admin page for the 'user_tags' taxonomy
+ */
+function add_user_tags_taxonomy_admin_page()
+{
+
+    $tax = get_taxonomy('user_tags');
+
+    add_users_page(
+        esc_attr($tax->labels->menu_name),
+        esc_attr($tax->labels->menu_name),
+        $tax->cap->manage_terms,
+        'edit-tags.php?taxonomy=' . $tax->name
+    );
+
+}
+add_action('admin_menu', 'add_user_tags_taxonomy_admin_page');
+
+/**
+ * Unsets the 'posts' column and adds a 'users' column on the manage user_tags admin page.
+ */
+function manage_user_tags_user_column($columns)
+{
+
+    unset($columns['posts']);
+
+    $columns['users'] = __('Users');
+
+    return $columns;
+}
+add_filter('manage_edit-user_tags_columns', 'manage_user_tags_user_column');

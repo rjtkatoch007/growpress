@@ -267,3 +267,63 @@ function render_users_tags($output, $column_name, $user_id)
 }
 
 add_filter('manage_users_custom_column', 'render_users_tags', 10, 3);
+
+add_action('pre_get_users', 'filter_users_by_user_tags', 99, 1);
+function filter_users_by_user_tags($query)
+{
+    // This condition allows us to make sure that we won't modify any query that came from the frontend
+    if (!is_admin()) {
+        return;
+    }
+    global $pagenow;
+    // This condition allows us to make sure that we're modifying a query that fires on the wp-admin/users.php page
+    if ('users.php' === $pagenow) {
+        // Our filtering logic goes here
+        // Let's check if our filter has been used
+        if (isset($_GET['utags']) && $_GET['utags'] !== '0') {
+            print_r($_GET);
+            $meta_query = array(
+                array(
+                    'key' => 'utags',
+                    'value' => $_GET['utags'],
+                    'compare' => '='
+                )
+            );
+            $query->set('meta_query', $meta_query);
+
+
+        }
+    }
+    return;
+}
+?>
+<?php
+add_action('manage_users_extra_tablenav', 'render_custom_filter_options');
+function render_custom_filter_options($user)
+{
+    global $pagenow;
+
+    $terms = get_terms('user_tags', array('hide_empty' => false));
+    if (!empty($terms)) {
+        $selectTerms = [];
+        foreach ($terms as $term) {
+            $selectTerms[$term->term_id] = $term->name;
+        }
+        // get all terms linked with the user
+        $usrTerms = get_the_terms($user->ID, 'user_tags');
+        ?>
+        <form method="GET">
+            <select name="utags" id="utags">
+                <option value="0">Select by user tags...</option>
+                <?php foreach ($selectTerms as $value => $label): ?>
+                    <option value="<?php echo esc_attr($value); ?>"><?php echo esc_html($label); ?></option>
+                <?php endforeach; ?>
+            </select>
+            <input type="submit" class="button" value="Filter">
+        </form>
+        </div>
+
+        <?php
+
+    }
+}

@@ -242,3 +242,28 @@ function change_parent_file($parent_file)
     return $parent_file;
 }
 add_filter('parent_file', 'change_parent_file');
+
+function register_user_tags($columns)
+{
+    $columns['user_tags'] = 'User Tags';
+    return $columns;
+}
+//admin columns
+add_filter('manage_users_columns', 'register_user_tags');
+
+
+function render_users_tags($output, $column_name, $user_id)
+{
+    /*  if ($column_name == 'user_tags') {
+
+         $output = get_user_meta($user_id, 'user_tags', true);        
+     }
+     return $output; */
+    $user = get_userdata($user_id);
+    if ('user_tags' == $column_name)
+        return $user_id;
+    return $output;
+
+}
+
+add_filter('manage_users_custom_column', 'render_users_tags', 10, 3);
